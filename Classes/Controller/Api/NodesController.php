@@ -15,6 +15,7 @@ use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindReferencesFil
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\Pagination\Pagination;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\PropertyValue\Criteria\PropertyValueContains;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateClassification;
 use Neos\ContentRepository\Core\SharedModel\Node\PropertyName;
 use Neos\Flow\Annotations as Flow;
@@ -49,14 +50,15 @@ class NodesController extends AbstractApiController
     #[Flow\Inject]
     protected RenderingModeService $renderingModeService;
 
-    public function showAction(string $nodeAddress): string
+    public function showAction(NodeAddress $nodeAddress, string $visibility = 'frontend', bool $includeDeleted = false): string
     {
-        $this->requireScope('neos.read');
-        $address = $this->decodeNodeAddress($nodeAddress);
-        $subgraph = $this->getSubgraph($address, $this->wantsFrontendVisibility(), $this->wantsDeletedNodes());
+        // $this->requireScope('neos.read'); -> TODO: würde sich ändern in Annotation
+        // $address = $this->decodeNodeAddress($nodeAddress);
+        $subgraph = $this->getSubgraph($nodeAddress, $visibility, $includeDeleted);
 
         $node = $subgraph->findNodeById($address->aggregateId);
         if ($node === null) {
+            // return NotFound obj.
             $this->throwJsonStatus(404, 'node_not_found', 'The node does not exist in this subgraph or is not visible for this account.');
         }
 
@@ -80,6 +82,7 @@ class NodesController extends AbstractApiController
         $pagination = $this->getPagination();
 
         switch ($relation) {
+            // TODO: hier explizite Actions.
             case 'children':
                 $nodes = $subgraph->findChildNodes($address->aggregateId, FindChildNodesFilter::create(nodeTypes: $nodeTypes, pagination: $pagination));
                 break;
@@ -210,6 +213,7 @@ class NodesController extends AbstractApiController
      */
     public function renderAction(string $nodeAddress): string
     {
+        // TODO: komplett eigener endpoint.
         $this->requireScope('neos.read');
         $address = $this->decodeNodeAddress($nodeAddress);
 

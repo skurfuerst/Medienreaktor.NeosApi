@@ -49,6 +49,10 @@ class NodeSerializer
             'name' => $node->name?->value,
             'label' => $this->plainTextLabel($this->nodeLabelGenerator->getLabel($node)),
             'classification' => $node->classification->value,
+            // !!! THINK ABOUT hasChildren (teuer!); $childrenNodeTypes hässlich ^^ -> FÜR TREE WÄRE DAS expliziter spezifischer hardcoded Endpoint.
+            // Tree API:
+            //  - wäre KEIN Node
+            //  - TreeItem (s) / EagerTreeItem|LazyTreeItem -> dann könnte man einen neuen Endpoint schaffen für neues Panel, welches Tree darstellt ganz einfach.
             'hasChildren' => $subgraph->countChildNodes($node->aggregateId, CountChildNodesFilter::create(nodeTypes: $childrenNodeTypes)) > 0,
             'workspace' => $node->workspaceName->value,
             'dimensionSpacePoint' => $node->dimensionSpacePoint->coordinates,

@@ -94,6 +94,11 @@ abstract class AbstractApiController extends ActionController
             return $subgraph;
         }
 
+        // TODO: ÜBERSCHREIBT!! Neos Auth Provider. (muss Rechte berücksichtigen)
+        // wie macht man das in "sicher"?
+        // Variante A: Query Param (aber: "darf ich das??")
+        // Variante B: Token Scope -> Extra Token + query param um versteckte auszublenden ("convenience, nicht mehr security") (unsere aktuelle Präferenz)
+        //  - DELETED Nodes als extra route -> FÜR TRASH BIN (NICHT ÜBER STANDARD API!) -> kann damit eigenen Token Scope bekommen ("Darf ich Trash sehen / interagieren")
         $constraints = $subgraph->getVisibilityConstraints();
         if ($frontendVisibility) {
             $constraints = $constraints->merge(NeosVisibilityConstraints::excludeDisabled());
@@ -127,7 +132,7 @@ abstract class AbstractApiController extends ActionController
      * must carry the required scope; the account's roles have already been
      * enforced by the Flow policy layer at this point.
      */
-    protected function requireScope(string $scope): void
+    protected function requireScope(string $scope): void // würde über Attribut passieren.
     {
         foreach ($this->securityContext->getAuthenticationTokensOfType(ApiBearerToken::class) as $token) {
             if ($token->isAuthenticated()) {
