@@ -10,9 +10,11 @@
 # a different role than its reads.
 #
 # TRADE-OFF: because Flow treats a method matched by NO privilege target as
-# open, a NEW controller/action added to Controller\Api is unprotected until it
-# is added to one of the matchers below. Keep the matchers in sync with the
-# controllers (coverage is checked against Controller\Api\*).
+# open, a NEW endpoint is unprotected until it is added to one of the matchers
+# below. That holds for both kinds of endpoint: an action of a Controller\Api
+# controller, and an #[Operation] method of an Api\* class (those are served
+# by one generic dispatch controller, so the privilege can only sit on the Api
+# method itself). Keep the matchers in sync with both.
 #
 # The Controller\OAuth namespace is deliberately NOT matched as a feature:
 # token issuance, discovery and dynamic client registration are public
@@ -62,7 +64,7 @@ privilegeTargets:
 
     # Read the configured content dimensions.
     'Medienreaktor.NeosApi:Api.Dimensions':
-      matcher: 'method(Medienreaktor\NeosApi\Controller\Api\DimensionsController->.*Action())'
+      matcher: 'method(Medienreaktor\NeosApi\Api\DimensionsApi->index())'
 
     # Read the list of sites.
     'Medienreaktor.NeosApi:Api.Sites.Read':

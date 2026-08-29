@@ -1,13 +1,36 @@
 # Medienreaktor.NeosApi — development notes
 
+## Two kinds of endpoint, and which one you are touching
+
+The API is migrating from Flow controllers to attribute-annotated Api classes
+served by `neos/openapi` (see the repository root's `PLAN.md`). Both exist:
+
+- **`Classes/Api/*Api.php`** — a `#[Operation]` method per endpoint. Its route,
+  its OpenAPI operation and its request/response schemas are all GENERATED from
+  the method and its DTOs (`Classes/Api/Dto/`), so there is nothing to keep in
+  sync. Registering the class in `Settings.yaml` under `openApi.apiClasses` is
+  what serves it; `Configuration/Policy.yaml` still needs a matcher for the
+  method (`./flow neosapi:policycoverage` fails if you forget).
+- **`Classes/Controller/Api/*Controller.php`** — the not-yet-migrated rest.
+  Routes, policy and the hand-maintained spec move together, as below.
+
+`Classes/Framework/` is the wiring between the two: `OpenApiRoutesProvider`
+puts generated operations into Flow routing, `OpenApiDispatchController` serves
+them, `SpecMerger` merges the generated document into the hand-maintained one,
+and `LegacyErrorTranslator` keeps the `{"error", "error_description"}` envelope
+on the wire while the library speaks RFC 9457 internally.
+
 ## The OpenAPI document is part of every endpoint change
 
-`Resources/Private/OpenApi/openapi.yaml` is the hand-maintained API contract.
-Any change to `Configuration/Routes.yaml`, a `Controller/Api` action's
+`Resources/Private/OpenApi/openapi.yaml` is the hand-maintained contract for
+the endpoints that are still controllers. Any change to
+`Configuration/Routes.yaml`, a `Controller/Api` action's
 parameters/body/response, a serializer's output shape, an error code, or a
 required scope is INCOMPLETE until the document reflects it. Treat it like
 `Configuration/Policy.yaml`: routes, policy and spec move together in the
-same commit.
+same commit. Migrated endpoints need none of this - deleting a controller means
+deleting its route and its paths from the YAML in the same step, and the
+generated document takes over.
 
 Verify before committing:
 
@@ -42,11 +65,29 @@ change what a serializer emits or what an action reads, update the matching
 
 ## General package conventions
 
-- Policy discipline: every new `Controller\Api` action must be matched by a
-  privilege target in `Policy.yaml` (Flow treats unmatched methods as open;
-  the Neos catch-all then denies them - either way, be explicit).
+- Policy discipline: every new `Controller\Api` action AND every new `Api\*`
+  `#[Operation]` method must be matched by a privilege target in `Policy.yaml`
+  (Flow treats unmatched methods as open; for controllers the Neos catch-all
+  then denies them, but an Api class is not a controller, so nothing catches it
+  - be explicit). `./flow neosapi:policycoverage` checks both.
+- Free-form maps (dimension coordinates, node properties, workspace
+  `extensions`) cannot be derived by `neos/schematic`: carry them as a builtin
+  `array` property of a DTO and hand-write that DTO's `schema()`. The
+  serializer preserves the string keys, so the wire format is unaffected; the
+  published schema is only `additionalProperties: true` until
+  `neos/jsonschema` grows the keyword. Hold every hand-written schema to
+  `Neos\Schematic\Conformance::check()`.
+- Compiling the API costs ~4 ms cold and is memoized per request
+  (`CompiledApiProvider`). Measure again before adding a Flow cache.
 - Load resources via the `resource://` stream wrapper, never `__DIR__`
   (Flow proxy classes resolve to the cache directory).
-- E2E testing runs against ddev; smoke tests live in `Tests/*.sh` — note
-  `Tests/` is gitignored (local dev tooling only), which is why the sync
-  check lives in `.github/scripts/` instead.
+- Unit tests live in `Tests/Unit` and run with the distribution's suite:
+  `./bin/phpunit -c Build/BuildEssentials/PhpUnit/UnitTests.xml --filter Medienreaktor`
+  (the package is symlinked into `Packages/Application`, which is where the
+  suite looks). Hold every hand-written DTO schema to `Conformance::check()`
+  there — `Tests/Unit/Api/Dto/DtoConformanceTest.php` is the list to extend.
+  Note that building a Flow `Route` emits a PHP 8.5 deprecation from Flow
+  itself, and this suite fails a test that prints anything, so tests touching
+  routing buffer their output.
+- E2E smoke tests are shell scripts under `Tests/` and run against the local
+  instance.

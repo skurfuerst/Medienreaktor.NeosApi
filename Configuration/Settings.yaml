@@ -39,6 +39,22 @@ Medienreaktor:
       # Flow account identifiers whose roles the token acts with.
       clientCredentialsAccounts: {}
 
+    # Endpoints generated from attribute-annotated Api classes (neos/openapi).
+    # Registering a class here is what puts its operations into routing, into
+    # the served OpenAPI document and into ./flow routing:list - one entry per
+    # migrated feature. Every method of a registered class must also be covered
+    # by a Policy.yaml matcher, exactly as a controller action is.
+    openApi:
+      info:
+        title: 'Neos API'
+        version: '1.9'
+      apiClasses:
+        'Dimensions':
+          className: 'Medienreaktor\NeosApi\Api\DimensionsApi'
+          tag: 'Dimensions'
+          tagDescription: 'The configured content dimensions.'
+          position: '10'
+
     # The authentication provider name whose accounts API users authenticate as
     accountAuthenticationProviderName: 'Neos.Neos:Backend'
 
@@ -87,6 +103,14 @@ Neos:
   Flow:
     mvc:
       routes:
+        # Operations generated from the Api classes, one route each. A
+        # providerFactory can only be declared here, not in a package's own
+        # Routes.yaml, which Flow parses as plain route definitions. Declared
+        # before the static routes so a migrated path wins over any leftover
+        # route for the same URI.
+        'Medienreaktor.NeosApi:OpenApi':
+          providerFactory: 'Medienreaktor\NeosApi\Framework\OpenApiRoutesProviderFactory'
+          position: 'before Medienreaktor.NeosApi'
         'Medienreaktor.NeosApi':
           position: 'before Neos.Neos'
 
@@ -101,10 +125,14 @@ Neos:
             provider: 'Medienreaktor\NeosApi\Security\Authentication\Provider\OAuthBearerProvider'
             token: 'Medienreaktor\NeosApi\Security\Authentication\Token\ApiBearerToken'
             requestPatterns:
-              'Medienreaktor.NeosApi:ApiControllers':
-                pattern: 'ControllerObjectName'
+              # Path-based rather than controller-based: migrated endpoints are
+              # served by one generic dispatch controller (see
+              # Framework\OpenApiRoutesProvider), so a controller name no longer
+              # identifies "an API request". The path always has.
+              'Medienreaktor.NeosApi:ApiUri':
+                pattern: 'Uri'
                 patternOptions:
-                  controllerObjectNamePattern: 'Medienreaktor\NeosApi\Controller\Api\.*'
+                  uriPattern: '/api/.*'
 
           # Make the Neos backend session visible on the OAuth authorize
           # endpoint (patterns of the same type are OR-combined), so the

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Medienreaktor\NeosApi\Controller\Api;
 
+use Medienreaktor\NeosApi\Framework\CompiledApiProvider;
+use Medienreaktor\NeosApi\Framework\SpecMerger;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\ResourceManagement\ResourceManager;
@@ -35,6 +37,12 @@ class DocsController extends ActionController
     #[Flow\Inject]
     protected ResourceManager $resourceManager;
 
+    #[Flow\Inject]
+    protected SpecMerger $specMerger;
+
+    #[Flow\Inject]
+    protected CompiledApiProvider $compiledApiProvider;
+
     /**
      * @var array<string, mixed>
      */
@@ -42,14 +50,19 @@ class DocsController extends ActionController
     protected array $oauthSettings;
 
     /**
-     * The OpenAPI document as JSON. The YAML source is host-agnostic; the
-     * request-dependent parts (server URL, OAuth endpoint URLs and the
-     * configured scope catalog) are stamped in at serve time so the document
-     * is immediately usable by "try it" clients and code generators.
+     * The OpenAPI document as JSON: the hand-maintained YAML for the endpoints
+     * that are still Flow controllers, with the operations generated from the
+     * Api classes merged in (see SpecMerger). The YAML source is host-agnostic;
+     * the request-dependent parts (server URL, OAuth endpoint URLs and the
+     * configured scope catalog) are stamped in at serve time so the document is
+     * immediately usable by "try it" clients and code generators.
      */
     public function specAction(): string
     {
-        $spec = Yaml::parse((string)file_get_contents(self::SPEC_RESOURCE));
+        $spec = $this->specMerger->merge(
+            Yaml::parse((string)file_get_contents(self::SPEC_RESOURCE)),
+            $this->compiledApiProvider->get()
+        );
 
         $spec['servers'] = [['url' => $this->getBaseUri()]];
 

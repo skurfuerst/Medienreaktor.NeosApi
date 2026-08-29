@@ -14,6 +14,7 @@ use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Reflection\ReflectionService;
+use Neos\OpenApi\Attributes\Operation;
 
 class NeosApiCommandController extends CommandController
 {
@@ -38,6 +39,12 @@ class NeosApiCommandController extends CommandController
     /**
      * @var array<string, string>
      */
+    /**
+     * @var array<string, array{className?: string}>
+     */
+    #[Flow\InjectConfiguration(package: 'Medienreaktor.NeosApi', path: 'openApi.apiClasses')]
+    protected array $apiClasses = [];
+
     #[Flow\InjectConfiguration(package: 'Medienreaktor.NeosApi', path: 'oauth.scopes')]
     protected array $configuredScopes = [];
 
@@ -160,12 +167,15 @@ class NeosApiCommandController extends CommandController
     }
 
     /**
-     * Verify that every API controller action is covered by a policy matcher
+     * Verify that every API endpoint is covered by a policy matcher
      *
-     * Flow treats a controller method matched by NO privilege target as OPEN,
-     * so a new Controller\Api action is unprotected until it is added to a
-     * matcher in Policy.yaml. This command fails (exit code 1) if any action
-     * slipped through - run it as part of the test suite.
+     * Flow treats a method matched by NO privilege target as OPEN, so a new
+     * endpoint is unprotected until it is added to a matcher in Policy.yaml.
+     * That holds for both kinds this package has: an action of a Controller\Api
+     * controller, and an #[Operation] method of a registered Api class (those
+     * are served through one generic dispatch controller, so the matcher can
+     * only sit on the Api method itself). This command fails (exit code 1) if
+     * any of them slipped through - run it as part of the test suite.
      */
     public function policyCoverageCommand(): void
     {
@@ -195,6 +205,15 @@ class NeosApiCommandController extends CommandController
             }
         }
 
+        $covers = static function (string $className, string $methodName) use ($matchers): bool {
+            foreach ($matchers as [$classPattern, $methodPattern]) {
+                if (preg_match($classPattern, $className) === 1 && preg_match($methodPattern, $methodName . '()') === 1) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
         $uncovered = [];
         foreach ($this->reflectionService->getAllSubClassNamesForClass(ActionController::class) as $className) {
             if (!str_starts_with($className, 'Medienreaktor\NeosApi\Controller\Api\\')
@@ -205,27 +224,37 @@ class NeosApiCommandController extends CommandController
                 if (!str_ends_with($methodName, 'Action') || !(new \ReflectionMethod($className, $methodName))->isPublic()) {
                     continue;
                 }
-                $covered = false;
-                foreach ($matchers as [$classPattern, $methodPattern]) {
-                    if (preg_match($classPattern, $className) === 1 && preg_match($methodPattern, $methodName . '()') === 1) {
-                        $covered = true;
-                        break;
-                    }
-                }
-                if (!$covered) {
+                if (!$covers($className, $methodName)) {
                     $uncovered[] = $className . '->' . $methodName . '()';
                 }
             }
         }
 
+        // The registered Api classes, not every class carrying #[Operation]:
+        // an unregistered one serves no requests, so it is not an open door.
+        foreach ($this->apiClasses as $registration) {
+            $className = $registration['className'] ?? null;
+            if (!is_string($className) || !class_exists($className)) {
+                continue;
+            }
+            foreach ((new \ReflectionClass($className))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                if ($method->getAttributes(Operation::class) === []) {
+                    continue;
+                }
+                if (!$covers($className, $method->getName())) {
+                    $uncovered[] = $className . '->' . $method->getName() . '()';
+                }
+            }
+        }
+
         if ($uncovered !== []) {
-            $this->outputLine('<error>%d API action(s) are NOT covered by any Medienreaktor.NeosApi policy matcher (and therefore OPEN):</error>', [count($uncovered)]);
-            foreach ($uncovered as $action) {
-                $this->outputLine('  %s', [$action]);
+            $this->outputLine('<error>%d API endpoint(s) are NOT covered by any Medienreaktor.NeosApi policy matcher (and therefore OPEN):</error>', [count($uncovered)]);
+            foreach ($uncovered as $endpoint) {
+                $this->outputLine('  %s', [$endpoint]);
             }
             $this->quit(1);
         }
-        $this->outputLine('<success>All API controller actions are covered by policy matchers.</success>');
+        $this->outputLine('<success>All API endpoints are covered by policy matchers.</success>');
     }
 
     /**

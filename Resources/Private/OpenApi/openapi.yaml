@@ -873,48 +873,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
-  /api/dimensions:
-    get:
-      tags: [Dimensions]
-      operationId: listDimensions
-      summary: The configured content dimensions
-      security:
-        - oauth2: [neos.read]
-      responses:
-        '200':
-          description: Dimensions (labels translated) and every allowed combination.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [dimensions, allowedDimensionSpacePoints]
-                properties:
-                  dimensions:
-                    type: array
-                    items:
-                      type: object
-                      required: [id, label, values]
-                      properties:
-                        id: { type: string }
-                        label: { type: string }
-                        icon: { type: [string, 'null'] }
-                        values:
-                          type: array
-                          description: Configuration order, depth-first - specializations follow their generalization.
-                          items:
-                            type: object
-                            required: [value, label, specializationDepth]
-                            properties:
-                              value: { type: string }
-                              label: { type: string }
-                              specializationDepth: { type: integer, minimum: 0 }
-                  allowedDimensionSpacePoints:
-                    type: array
-                    items: { $ref: '#/components/schemas/DimensionSpacePoint' }
-                    description: 'For a dimension-less repository this is `[{}]`.'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
   /api/data-sources/{dataSourceIdentifier}:
     get:
       tags: [DataSources]

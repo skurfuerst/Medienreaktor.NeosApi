@@ -479,16 +479,6 @@
   httpMethods: ['GET']
 
 -
-  name: 'API: Dimensions'
-  uriPattern: 'api/dimensions'
-  defaults:
-    '@package': 'Medienreaktor.NeosApi'
-    '@controller': 'Api\Dimensions'
-    '@action': 'index'
-    '@format': 'json'
-  httpMethods: ['GET']
-
--
   name: 'API: Users'
   uriPattern: 'api/users'
   defaults:
