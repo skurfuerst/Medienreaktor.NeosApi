@@ -50,10 +50,15 @@ Medienreaktor:
         version: '1.9'
       apiClasses:
         'Dimensions':
-          className: 'Medienreaktor\NeosApi\Api\DimensionsApi'
+          className: 'Medienreaktor\NeosApi\Features\Dimensions\DimensionsApi'
           tag: 'Dimensions'
           tagDescription: 'The configured content dimensions.'
           position: '10'
+        'NodeTypes':
+          className: 'Medienreaktor\NeosApi\Features\NodeTypes\NodeTypesApi'
+          tag: 'NodeTypes'
+          tagDescription: 'The node type schema.'
+          position: '20'
 
     # The authentication provider name whose accounts API users authenticate as
     accountAuthenticationProviderName: 'Neos.Neos:Backend'

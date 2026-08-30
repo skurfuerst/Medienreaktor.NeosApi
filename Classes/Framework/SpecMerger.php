@@ -29,6 +29,7 @@ use Neos\OpenApi\Problem\ProblemDocument;
 final class SpecMerger
 {
     private const ERROR_SCHEMA_REF = ['$ref' => '#/components/schemas/Error'];
+    private const LEGACY_ERROR_SCHEMA_REF = '#/components/schemas/LegacyError';
     private const RESPONSE_REFS = [
         401 => ['$ref' => '#/components/responses/Unauthorized'],
         403 => ['$ref' => '#/components/responses/Forbidden'],
@@ -50,7 +51,9 @@ final class SpecMerger
 
         foreach ((array)($generated['paths'] ?? []) as $path => $operations) {
             foreach ((array)$operations as $method => $operation) {
-                $spec['paths'][$path][$method] = is_array($operation) ? $this->withLegacyErrors($operation) : $operation;
+                $spec['paths'][$path][$method] = is_array($operation)
+                    ? $this->withLegacyErrors(self::withoutLegacyErrorSchema($operation))
+                    : $operation;
             }
         }
 
@@ -93,6 +96,32 @@ final class SpecMerger
         }
 
         return $spec;
+    }
+
+    /**
+     * Points every reference to the LegacyError DTO at the document's own
+     * `Error` schema.
+     *
+     * An operation that answers a deliberate failure - a missing node type -
+     * returns it as a body type of its own, which compiles to a second schema
+     * describing the envelope the YAML already describes as `Error`. Two names
+     * for one type would be a worse document, so the generated one is folded
+     * into the hand-maintained one here (and then dropped, unreferenced, by
+     * the sweep below). Like every other rewrite in this class, it goes away
+     * when the API adopts problem+json.
+     *
+     * @param array<string, mixed> $operation
+     * @return array<string, mixed>
+     */
+    private static function withoutLegacyErrorSchema(array $operation): array
+    {
+        array_walk_recursive($operation, static function (mixed &$value, string|int $key): void {
+            if ($key === '$ref' && $value === self::LEGACY_ERROR_SCHEMA_REF) {
+                $value = self::ERROR_SCHEMA_REF['$ref'];
+            }
+        });
+
+        return $operation;
     }
 
     /**

@@ -118,6 +118,27 @@ class SpecMergerTest extends UnitTestCase
     }
 
     /**
+     * A failure an operation raises itself carries a body of its own, and that
+     * body is the very envelope the document already describes as `Error`. Two
+     * names for one type would be a worse document, so the generated one is
+     * folded into the hand-maintained one and disappears.
+     *
+     * @test
+     */
+    public function deliberateFailuresShareTheDocumentsOneErrorSchema(): void
+    {
+        $merged = $this->merger->merge($this->spec(), $this->compiled);
+        $responses = $merged['paths']['/api/greetings/{name}']['get']['responses'];
+
+        self::assertSame(
+            ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Error']]],
+            $responses[404]['content']
+        );
+        self::assertSame('`greeting_not_found`', $responses[404]['description']);
+        self::assertArrayNotHasKey('LegacyError', $merged['components']['schemas']);
+    }
+
+    /**
      * @test
      */
     public function schemasTheGeneratedOperationsUseAreCarriedOver(): void

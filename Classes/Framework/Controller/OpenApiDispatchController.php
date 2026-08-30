@@ -58,8 +58,9 @@ final class OpenApiDispatchController implements ControllerInterface
         $errors = new LegacyErrorTranslator($httpFactory);
 
         try {
+            $compiled = $this->compiledApiProvider->get();
             $handler = new RequestHandler(
-                $this->compiledApiProvider->get(),
+                $compiled,
                 // Api classes are read out of Flow's container, so they are
                 // Flow proxies - which is what makes the policy AOP advice fire
                 // on their methods, and what gives them their dependencies.
@@ -68,7 +69,8 @@ final class OpenApiDispatchController implements ControllerInterface
                 $httpFactory,
                 $this->authContextProvider,
             );
-            $response = $errors->translate($handler->handle($this->applicationRelative($request->getHttpRequest())));
+            $httpRequest = $this->applicationRelative($request->getHttpRequest());
+            $response = $errors->translate($handler->handle($httpRequest));
         } catch (InsufficientScopeException $exception) {
             $response = $errors->json(
                 $httpFactory->createResponse(403),

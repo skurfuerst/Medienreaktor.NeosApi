@@ -60,11 +60,11 @@ privilegeTargets:
 
     # Read the node type schema.
     'Medienreaktor.NeosApi:Api.NodeTypes':
-      matcher: 'method(Medienreaktor\NeosApi\Controller\Api\NodeTypesController->.*Action())'
+      matcher: 'method(Medienreaktor\NeosApi\Features\NodeTypes\NodeTypesApi->(index|show)())'
 
     # Read the configured content dimensions.
     'Medienreaktor.NeosApi:Api.Dimensions':
-      matcher: 'method(Medienreaktor\NeosApi\Api\DimensionsApi->index())'
+      matcher: 'method(Medienreaktor\NeosApi\Features\Dimensions\DimensionsApi->index())'
 
     # Read the list of sites.
     'Medienreaktor.NeosApi:Api.Sites.Read':

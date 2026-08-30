@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Medienreaktor\NeosApi\Api\Dto;
+namespace Medienreaktor\NeosApi\Features\Dimensions\Dto;
 
 use Neos\JsonSchema\ArraySchema;
 use Neos\JsonSchema\ObjectSchema;

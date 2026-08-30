@@ -14,7 +14,7 @@ use Neos\OpenApi\Attributes\Operation;
 class GreetingApi
 {
     #[Operation(path: '/api/greetings/{name}', method: 'GET', operationId: 'showGreeting', security: ['oauth2' => ['neos.read']])]
-    public function show(Greeting $name): Greeting
+    public function show(Greeting $name): Greeting|GreetingNotFound
     {
         return $name;
     }

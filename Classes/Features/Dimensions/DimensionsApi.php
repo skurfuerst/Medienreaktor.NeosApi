@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Medienreaktor\NeosApi\Api;
+namespace Medienreaktor\NeosApi\Features\Dimensions;
 
-use Medienreaktor\NeosApi\Api\Dto\ContentDimension;
-use Medienreaktor\NeosApi\Api\Dto\ContentDimensions;
-use Medienreaktor\NeosApi\Api\Dto\ContentDimensionValue;
-use Medienreaktor\NeosApi\Api\Dto\ContentDimensionValues;
-use Medienreaktor\NeosApi\Api\Dto\Dimensions;
+use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimension;
+use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimensions;
+use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimensionValue;
+use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimensionValues;
+use Medienreaktor\NeosApi\Features\Dimensions\Dto\Dimensions;
 use Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;

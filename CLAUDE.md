@@ -5,20 +5,32 @@
 The API is migrating from Flow controllers to attribute-annotated Api classes
 served by `neos/openapi` (see the repository root's `PLAN.md`). Both exist:
 
-- **`Classes/Api/*Api.php`** — a `#[Operation]` method per endpoint. Its route,
-  its OpenAPI operation and its request/response schemas are all GENERATED from
-  the method and its DTOs (`Classes/Api/Dto/`), so there is nothing to keep in
-  sync. Registering the class in `Settings.yaml` under `openApi.apiClasses` is
-  what serves it; `Configuration/Policy.yaml` still needs a matcher for the
-  method (`./flow neosapi:policycoverage` fails if you forget).
+- **`Classes/Features/<Feature>/<Feature>Api.php`** — a `#[Operation]` method
+  per endpoint, with its DTOs in that feature's `Dto/` and its `ApiResponse`
+  classes in its `Response/`. Its route, its OpenAPI operation and its
+  request/response schemas are all GENERATED from the method and its DTOs, so
+  there is nothing to keep in sync. Registering the class in `Settings.yaml`
+  under `openApi.apiClasses` is what serves it; `Configuration/Policy.yaml`
+  still needs a matcher for the method (`./flow neosapi:policycoverage` fails
+  if you forget).
 - **`Classes/Controller/Api/*Controller.php`** — the not-yet-migrated rest.
   Routes, policy and the hand-maintained spec move together, as below.
 
 `Classes/Framework/` is the wiring between the two: `OpenApiRoutesProvider`
 puts generated operations into Flow routing, `OpenApiDispatchController` serves
 them, `SpecMerger` merges the generated document into the hand-maintained one,
-and `LegacyErrorTranslator` keeps the `{"error", "error_description"}` envelope
-on the wire while the library speaks RFC 9457 internally.
+and `LegacyErrorTranslator` plus `Dto\LegacyError` keep the
+`{"error", "error_description"}` envelope on the wire while the library speaks
+RFC 9457 internally.
+
+**Never put an attribute on a parameter of an `#[Operation]` method.** A
+`Policy.yaml` matcher makes Flow weave AOP advice, and the proxy it generates
+re-declares the method without its parameters' attributes (method attributes
+survive, which is why `#[Operation]` works). `#[Parameter]` is therefore
+silently ignored — put the text in the operation's `description:` — and
+`#[RequestBody]` / `#[AuthContext]` fail hard: the compiler treats the argument
+as an ordinary parameter, throws, and since compilation happens in the routes
+provider, *every* API request answers 500. See PLAN.md for the two ways out.
 
 ## The OpenAPI document is part of every endpoint change
 
@@ -76,7 +88,14 @@ change what a serializer emits or what an action reads, update the matching
   serializer preserves the string keys, so the wire format is unaffected; the
   published schema is only `additionalProperties: true` until
   `neos/jsonschema` grows the keyword. Hold every hand-written schema to
-  `Neos\Schematic\Conformance::check()`.
+  `Neos\Schematic\Conformance::check()` — and make sure it really says
+  `type: object` where a map lives: an *empty* one would otherwise encode as
+  `[]`, and the schema is the only thing that says it is `{}` (which is why
+  `Schematic::serialize()` takes one).
+- A DTO cannot omit a member (`Serializer::readShape()` emits every constructor
+  parameter). An endpoint whose response adds keys conditionally needs one
+  class per shape, published as a `oneOf` and held in a builtin `array` — see
+  `Features/NodeTypes/Dto/NodeTypes.php`.
 - Compiling the API costs ~4 ms cold and is memoized per request
   (`CompiledApiProvider`). Measure again before adding a Flow cache.
 - Load resources via the `resource://` stream wrapper, never `__DIR__`
@@ -85,7 +104,7 @@ change what a serializer emits or what an action reads, update the matching
   `./bin/phpunit -c Build/BuildEssentials/PhpUnit/UnitTests.xml --filter Medienreaktor`
   (the package is symlinked into `Packages/Application`, which is where the
   suite looks). Hold every hand-written DTO schema to `Conformance::check()`
-  there — `Tests/Unit/Api/Dto/DtoConformanceTest.php` is the list to extend.
+  there — `Tests/Unit/Features/DtoConformanceTest.php` is the list to extend.
   Note that building a Flow `Route` emits a PHP 8.5 deprecation from Flow
   itself, and this suite fails a test that prints anything, so tests touching
   routing buffer their output.

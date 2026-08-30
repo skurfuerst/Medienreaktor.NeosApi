@@ -459,26 +459,6 @@
   httpMethods: ['POST']
 
 -
-  name: 'API: NodeTypes'
-  uriPattern: 'api/node-types'
-  defaults:
-    '@package': 'Medienreaktor.NeosApi'
-    '@controller': 'Api\NodeTypes'
-    '@action': 'index'
-    '@format': 'json'
-  httpMethods: ['GET']
-
--
-  name: 'API: NodeType'
-  uriPattern: 'api/node-types/{nodeTypeName}'
-  defaults:
-    '@package': 'Medienreaktor.NeosApi'
-    '@controller': 'Api\NodeTypes'
-    '@action': 'show'
-    '@format': 'json'
-  httpMethods: ['GET']
-
--
   name: 'API: Users'
   uriPattern: 'api/users'
   defaults:
