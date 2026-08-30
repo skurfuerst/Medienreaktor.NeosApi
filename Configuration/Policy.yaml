@@ -72,7 +72,7 @@ privilegeTargets:
 
     # Read the list of users.
     'Medienreaktor.NeosApi:Api.Users.Read':
-      matcher: 'method(Medienreaktor\NeosApi\Controller\Api\UsersController->(index|show)Action())'
+      matcher: 'method(Medienreaktor\NeosApi\Features\Users\UsersApi->(index|show)())'
 
     # Invoke the Neos data sources backing select-box style editors. Read-
     # shaped by convention (data sources populate editor options), hence
@@ -96,7 +96,7 @@ privilegeTargets:
     # read, but only the admin-only role picker needs it). Administrators
     # only.
     'Medienreaktor.NeosApi:Api.Users.Write':
-      matcher: 'method(Medienreaktor\NeosApi\Controller\Api\UsersController->(create|update|delete|roles)Action())'
+      matcher: 'method(Medienreaktor\NeosApi\Features\Users\UsersApi->(create|update|delete|roles)())'
 
     # --- Media features ----------------------------------------------------
 

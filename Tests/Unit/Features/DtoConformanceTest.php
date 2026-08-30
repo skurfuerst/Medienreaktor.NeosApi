@@ -14,7 +14,16 @@ use Medienreaktor\NeosApi\Features\NodeTypes\Dto\NodeType;
 use Medienreaktor\NeosApi\Features\NodeTypes\Dto\NodeTypes;
 use Medienreaktor\NeosApi\Features\NodeTypes\Dto\NodeTypeSummary;
 use Medienreaktor\NeosApi\Features\NodeTypes\Dto\NodeTypeSummaryWithProperties;
+use Medienreaktor\NeosApi\Features\Users\Dto\Account;
+use Medienreaktor\NeosApi\Features\Users\Dto\AssignableRole;
+use Medienreaktor\NeosApi\Features\Users\Dto\AssignableRoles;
+use Medienreaktor\NeosApi\Features\Users\Dto\NewUser;
+use Medienreaktor\NeosApi\Features\Users\Dto\User;
+use Medienreaktor\NeosApi\Features\Users\Dto\UserEnvelope;
+use Medienreaktor\NeosApi\Features\Users\Dto\UserPatch;
+use Medienreaktor\NeosApi\Features\Users\Dto\Users;
 use Medienreaktor\NeosApi\Framework\Dto\LegacyError;
+use Medienreaktor\NeosApi\Framework\Dto\Success;
 use Neos\Flow\Tests\UnitTestCase;
 use Neos\Schematic\Conformance;
 
@@ -44,7 +53,16 @@ class DtoConformanceTest extends UnitTestCase
         yield 'NodeTypeSummaryWithProperties (hand-written schema)' => [NodeTypeSummaryWithProperties::class];
         yield 'NodeType (hand-written schema)' => [NodeType::class];
         yield 'DataSourceResult (hand-written schema)' => [DataSourceResult::class];
+        yield 'Users (hand-written schema)' => [Users::class];
+        yield 'User (hand-written schema)' => [User::class];
+        yield 'Account' => [Account::class];
+        yield 'UserEnvelope' => [UserEnvelope::class];
+        yield 'AssignableRoles (hand-written schema)' => [AssignableRoles::class];
+        yield 'AssignableRole' => [AssignableRole::class];
+        yield 'NewUser (hand-written schema)' => [NewUser::class];
+        yield 'UserPatch (hand-written schema)' => [UserPatch::class];
         yield 'LegacyError' => [LegacyError::class];
+        yield 'Success (hand-written schema)' => [Success::class];
     }
 
     /**
@@ -120,6 +138,29 @@ class DtoConformanceTest extends UnitTestCase
         );
         self::assertSame([], Conformance::checkSerialization($summary));
         self::assertSame([], Conformance::checkSerialization($detailed));
+    }
+
+    /**
+     * `{"success": true}` is a one-member envelope whose member is a boolean,
+     * which is written exactly like a scalar-backed value object - only its
+     * schema says it is an object, and only because `Schematic::serialize()`
+     * reads the class through that schema does the body come out as one
+     * rather than as bare `true`. Every deletion in this API answers with it,
+     * so it is pinned rather than trusted.
+     *
+     * Both halves are held: `check()` above (the schema is what makes the
+     * class a shape in BOTH directions, so it can also be mapped from
+     * `{"success": true}`) and `checkSerialization()` here.
+     *
+     * @test
+     */
+    public function aSuccessBodyIsAnObjectNotABareBoolean(): void
+    {
+        self::assertSame(
+            '{"success":true}',
+            json_encode(\Neos\Schematic\Schematic::serialize(Success::schema(), new Success()), JSON_UNESCAPED_SLASHES)
+        );
+        self::assertSame([], Conformance::checkSerialization(new Success()));
     }
 
     /**

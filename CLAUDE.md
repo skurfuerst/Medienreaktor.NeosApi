@@ -29,14 +29,17 @@ endpoint whose contract a signature cannot hold. `DataSourcesApi` is the only
 one that has it (it forwards every query parameter it did not name); anything
 the document could describe belongs in the signature instead.
 
-**Never put an attribute on a parameter of an `#[Operation]` method.** A
-`Policy.yaml` matcher makes Flow weave AOP advice, and the proxy it generates
-re-declares the method without its parameters' attributes (method attributes
-survive, which is why `#[Operation]` works). `#[Parameter]` is therefore
-silently ignored — put the text in the operation's `description:` — and
-`#[RequestBody]` / `#[AuthContext]` fail hard: the compiler treats the argument
-as an ordinary parameter, throws, and since compilation happens in the routes
-provider, *every* API request answers 500. See PLAN.md for the two ways out.
+Parameter attributes (`#[Parameter]`, `#[RequestBody]`, `#[AuthContext]`) DO
+work, but only because neos/openapi goes looking for them. A `Policy.yaml`
+matcher makes Flow weave AOP advice, and the proxy it generates re-declares the
+method without its parameters' attributes (method attributes survive, which is
+why `#[Operation]` works) - so the compiler reads them from the declaration one
+level up, on the `_Original` class the proxy extends. Keep that in mind if an
+attribute ever seems ignored: check that the class the attribute is written on
+is the one being reflected. Note also that Flow INSTANTIATES parameter
+attributes during `core:compile`, so a malformed one (`#[Parameter]` without
+`in:`) is a boot failure - every request 500s and the trace names Flow, not
+this API. `Data/Logs/Exceptions/` has the real message.
 
 ## The OpenAPI document is part of every endpoint change
 
@@ -102,6 +105,34 @@ change what a serializer emits or what an action reads, update the matching
   blob - is `Neos\JsonSchema\AnySchema`, the empty schema `{}`. It takes a
   description, and it leaves the value untouched on the way out, so an empty
   array stays `[]`. Do not reach for it where the shape IS known.
+- A DTO whose only constructor parameter is a builtin scalar is written
+  exactly like a VALUE OBJECT. Its schema is what tells the two apart, so a
+  one-member envelope MUST hand-write `type: object` (see
+  `Framework/Dto/Success`); with a derived schema it becomes
+  `{"type":"string"}` and the body goes out as a bare primitive - and as a
+  request body a JSON object is then rejected with
+  `Expected a string, got array`.
+- `Conformance::check()` resolves a class the same way the engine does (schema
+  first, constructor where the schema cannot say), so it is the right check for
+  every DTO including one-member envelopes. `checkSerialization()` is the
+  other half and needs an instance - worth adding for anything whose exact
+  wire bytes matter.
+- Keep VALUE checks out of a request body's schema while a documented `error`
+  code covers them. A `format: email` or `minLength: 1` answers first, with the
+  library's issue-level 400, and the documented `invalid_email` /
+  `invalid_password` body never happens. Structural checks (required members,
+  types) belong in the schema. See the TODO in `Features/Users/Dto/NewUser`.
+- A success that is not 200 is an `ApiResponse` class, not a DTO - the library
+  gives the plain success branch of a return type the status 200. See
+  `Features/Users/Response/UserCreated` for a 201.
+- Two `ApiResponse` classes with the same status code on ONE operation
+  overwrite each other in the document. Give an operation one class per status
+  and let it carry the code (`Features/Users/Response/UserRejected` has a named
+  constructor per documented 400).
+- A literal path and a template that could match it (`/api/users/roles` vs
+  `/api/users/{userId}`) are ordered by the DECLARATION ORDER of the
+  `#[Operation]` methods. Declare the literal one first and check
+  `./flow routing:list`.
 - A DTO cannot omit a member (`Serializer::readShape()` emits every constructor
   parameter). An endpoint whose response adds keys conditionally needs one
   class per shape, published as a `oneOf` and held in a builtin `array` — see

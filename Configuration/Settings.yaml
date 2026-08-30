@@ -64,6 +64,11 @@ Medienreaktor:
           tag: 'DataSources'
           tagDescription: 'Invoke Neos data sources (select-box style editor options).'
           position: '30'
+        'Users':
+          className: 'Medienreaktor\NeosApi\Features\Users\UsersApi'
+          tag: 'Users'
+          tagDescription: 'Backend user administration.'
+          position: '40'
 
     # The authentication provider name whose accounts API users authenticate as
     accountAuthenticationProviderName: 'Neos.Neos:Backend'
