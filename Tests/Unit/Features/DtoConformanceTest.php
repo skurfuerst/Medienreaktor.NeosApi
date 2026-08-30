@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Medienreaktor\NeosApi\Tests\Unit\Features;
 
+use Medienreaktor\NeosApi\Features\DataSources\Dto\DataSourceResult;
 use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimension;
 use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimensions;
 use Medienreaktor\NeosApi\Features\Dimensions\Dto\ContentDimensionValue;
@@ -42,6 +43,7 @@ class DtoConformanceTest extends UnitTestCase
         yield 'NodeTypeSummary (hand-written schema)' => [NodeTypeSummary::class];
         yield 'NodeTypeSummaryWithProperties (hand-written schema)' => [NodeTypeSummaryWithProperties::class];
         yield 'NodeType (hand-written schema)' => [NodeType::class];
+        yield 'DataSourceResult (hand-written schema)' => [DataSourceResult::class];
         yield 'LegacyError' => [LegacyError::class];
     }
 
@@ -118,6 +120,44 @@ class DtoConformanceTest extends UnitTestCase
         );
         self::assertSame([], Conformance::checkSerialization($summary));
         self::assertSame([], Conformance::checkSerialization($detailed));
+    }
+
+    /**
+     * A data source's return value is third-party code's, and the envelope
+     * publishes it as the empty schema: unconstrained, and therefore also
+     * unprojected - what the data source built is what goes on the wire. The
+     * shapes this endpoint has always emitted are pinned here, including the
+     * one no locally available data source produces (an empty result), since
+     * an empty PHP array is exactly where a schema would otherwise interfere.
+     *
+     * @test
+     * @dataProvider dataSourceValueProvider
+     */
+    public function aDataSourceResultIsForwardedVerbatim(mixed $value, string $expectedJson): void
+    {
+        self::assertSame(
+            $expectedJson,
+            json_encode(
+                \Neos\Schematic\Schematic::serialize(DataSourceResult::schema(), new DataSourceResult($value)),
+                JSON_UNESCAPED_SLASHES
+            )
+        );
+    }
+
+    /**
+     * @return iterable<string, array{mixed, string}>
+     */
+    public static function dataSourceValueProvider(): iterable
+    {
+        // The conventional shape: a list of options.
+        yield 'list' => [[['value' => 'a', 'label' => 'A']], '{"data":[{"value":"a","label":"A"}]}'];
+        // An empty one must stay a list: `AnySchema` describes no structure,
+        // so nothing reshapes it into the `{}` an ObjectSchema would imply.
+        yield 'empty list' => [[], '{"data":[]}'];
+        // What Neos' own form-definition data source returns: a map.
+        yield 'map' => [['' => ['label' => '']], '{"data":{"":{"label":""}}}'];
+        yield 'null' => [null, '{"data":null}'];
+        yield 'scalar' => ['plain', '{"data":"plain"}'];
     }
 
     /**

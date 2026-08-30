@@ -796,55 +796,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
-  /api/data-sources/{dataSourceIdentifier}:
-    get:
-      tags: [DataSources]
-      operationId: invokeDataSource
-      summary: Invoke a Neos data source
-      description: >
-        Calls a registered `DataSourceInterface` implementation (the ones
-        backing select-box editors). All query parameters other than `node`
-        are forwarded verbatim to the data source as its arguments
-        (`editorOptions.dataSourceAdditionalData` contract).
-      security:
-        - oauth2: [neos.read]
-      parameters:
-        - name: dataSourceIdentifier
-          in: path
-          required: true
-          schema: { type: string }
-        - name: node
-          in: query
-          required: false
-          schema: { $ref: '#/components/schemas/NodeAddress' }
-          description: Optional node context for the data source.
-      responses:
-        '200':
-          description: The data source result.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    description: >
-                      The raw `getData()` return value - schema is data-source
-                      specific; conventionally a list of `{value, label}`
-                      options.
-        '400': { $ref: '#/components/responses/InvalidNodeAddress' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404':
-          description: '`unknown_data_source` or `node_not_found`.'
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '500':
-          description: '`data_source_failed` - the data source threw (message logged, not exposed).'
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
   # --- Sites ----------------------------------------------------------------
 
   /api/sites:

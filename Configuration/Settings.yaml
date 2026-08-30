@@ -59,6 +59,11 @@ Medienreaktor:
           tag: 'NodeTypes'
           tagDescription: 'The node type schema.'
           position: '20'
+        'DataSources':
+          className: 'Medienreaktor\NeosApi\Features\DataSources\DataSourcesApi'
+          tag: 'DataSources'
+          tagDescription: 'Invoke Neos data sources (select-box style editor options).'
+          position: '30'
 
     # The authentication provider name whose accounts API users authenticate as
     accountAuthenticationProviderName: 'Neos.Neos:Backend'

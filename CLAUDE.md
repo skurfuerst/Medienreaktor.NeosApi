@@ -23,6 +23,12 @@ and `LegacyErrorTranslator` plus `Dto\LegacyError` keep the
 `{"error", "error_description"}` envelope on the wire while the library speaks
 RFC 9457 internally.
 
+An operation argument typed `Psr\Http\Message\ServerRequestInterface` is
+handed the raw request and stays out of the document - the escape hatch for an
+endpoint whose contract a signature cannot hold. `DataSourcesApi` is the only
+one that has it (it forwards every query parameter it did not name); anything
+the document could describe belongs in the signature instead.
+
 **Never put an attribute on a parameter of an `#[Operation]` method.** A
 `Policy.yaml` matcher makes Flow weave AOP advice, and the proxy it generates
 re-declares the method without its parameters' attributes (method attributes
@@ -92,6 +98,10 @@ change what a serializer emits or what an action reads, update the matching
   `type: object` where a map lives: an *empty* one would otherwise encode as
   `[]`, and the schema is the only thing that says it is `{}` (which is why
   `Schematic::serialize()` takes one).
+- A member nothing can constrain - a data source's return value, a plugin's
+  blob - is `Neos\JsonSchema\AnySchema`, the empty schema `{}`. It takes a
+  description, and it leaves the value untouched on the way out, so an empty
+  array stays `[]`. Do not reach for it where the shape IS known.
 - A DTO cannot omit a member (`Serializer::readShape()` emits every constructor
   parameter). An endpoint whose response adds keys conditionally needs one
   class per shape, published as a `oneOf` and held in a builtin `array` — see

@@ -78,7 +78,7 @@ privilegeTargets:
     # shaped by convention (data sources populate editor options), hence
     # grouped with the read features.
     'Medienreaktor.NeosApi:Api.DataSources':
-      matcher: 'method(Medienreaktor\NeosApi\Controller\Api\DataSourcesController->.*Action())'
+      matcher: 'method(Medienreaktor\NeosApi\Features\DataSources\DataSourcesApi->show())'
 
     # --- Write features ----------------------------------------------------
 
